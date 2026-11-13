@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db, t } from '#lib/server/db/index.js';
+import { parseTodoForm } from '#lib/server/forms.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -27,16 +28,15 @@ const str = (v: FormDataEntryValue | null) => (typeof v === 'string' && v.trim()
 
 export const actions: Actions = {
 	add: async ({ request }) => {
+		const r = parseTodoForm(await request.formData());
+		if (!r.ok) return fail(400, { error: r.error });
+		await db.insert(t.todos).values(r.value);
+	},
+	update: async ({ request }) => {
 		const f = await request.formData();
-		const title = str(f.get('title'));
-		if (!title) return fail(400, { error: 'Titel fehlt.' });
-		await db.insert(t.todos).values({
-			title,
-			notes: str(f.get('notes')),
-			dueDate: str(f.get('dueDate')),
-			priority: Math.min(3, Math.max(1, Number(f.get('priority')) || 2)),
-			categoryId: Number(f.get('categoryId')) || null
-		});
+		const r = parseTodoForm(f);
+		if (!r.ok) return fail(400, { error: r.error });
+		await db.update(t.todos).set(r.value).where(eq(t.todos.id, Number(f.get('id'))));
 	},
 	toggle: async ({ request }) => {
 		const f = await request.formData();

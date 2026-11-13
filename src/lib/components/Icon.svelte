@@ -12,7 +12,10 @@
 		left: 'M15 18l-6-6 6-6',
 		right: 'M9 18l6-6-6-6',
 		logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-		check: 'M20 6 9 17l-5-5'
+		check: 'M20 6 9 17l-5-5',
+		edit: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z',
+		settings: 'M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2M16 4v4M8 10v4M16 16v4',
+		sync: 'M21 12a9 9 0 0 1-15.5 6.2L3 16M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M3 21v-5h5'
 	} as const;
 
 	let { name, size = 20, class: cls = '' }: { name: keyof typeof paths; size?: number; class?: string } = $props();

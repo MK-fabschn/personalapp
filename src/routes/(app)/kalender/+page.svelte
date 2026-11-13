@@ -21,12 +21,15 @@
 	const FIRST_HOUR = 6;
 	const t0 = today();
 
-	let showForm = $state(false);
-	let formDate = $state(today());
-	let formStart = $state('09:00');
-	let allDay = $state(false);
-
 	type Ev = (typeof data.events)[number];
+
+	let showForm = $state(false);
+	let editing = $state<Ev | null>(null);
+	let formDate = $state(today());
+	let formEndDate = $state('');
+	let formStart = $state('09:00');
+	let formEnd = $state('10:00');
+	let allDay = $state(false);
 	const days = $derived(Array.from({ length: data.days }, (_, i) => addDays(data.from, i)));
 
 	/** Termine eines Tages, mit Spalten-Layout bei Überschneidungen */
@@ -82,12 +85,27 @@
 	const currentMonth = $derived(data.date.slice(0, 7));
 
 	function openForm(day: string, hour?: number) {
+		editing = null;
 		formDate = day;
+		formEndDate = '';
 		if (hour !== undefined) {
 			formStart = `${String(hour).padStart(2, '0')}:00`;
 			allDay = false;
 		}
+		formEnd = plusHour(formStart);
 		showForm = true;
+	}
+	function editEvent(e: Ev) {
+		editing = e;
+		formDate = localDate(e.start);
+		// Ganztägig: Ende ist die Mitternacht nach dem letzten Tag
+		const lastDay = localDate(e.allDay ? new Date(new Date(e.end).getTime() - 1) : e.end);
+		formEndDate = lastDay === formDate ? '' : lastDay;
+		allDay = e.allDay;
+		formStart = e.allDay ? '09:00' : fmtTime(e.start);
+		formEnd = e.allDay ? '10:00' : fmtTime(e.end);
+		showForm = true;
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 	const plusHour = (t: string) => {
 		const h = Math.min(23, Number(t.slice(0, 2)) + 1);
@@ -119,43 +137,47 @@
 </div>
 
 {#if showForm}
-	<form
-		method="POST"
-		action="?/add"
-		class="card mb-4 grid gap-3 p-4 sm:grid-cols-2"
-		use:enhance={() => async ({ result, update }) => {
-			await update();
-			if (result.type === 'success') showForm = false;
-		}}
-	>
-		<input class="input sm:col-span-2" name="title" placeholder="Titel" required />
-		<label class="space-y-1 text-sm"><span class="text-muted">Datum</span><input class="input" type="date" name="date" bind:value={formDate} required /></label>
-		<label class="space-y-1 text-sm"><span class="text-muted">Bis (optional)</span><input class="input" type="date" name="endDate" min={formDate} /></label>
-		<label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="allDay" bind:checked={allDay} class="size-4" /> Ganztägig</label>
-		{#if !allDay}
-			<label class="space-y-1 text-sm"><span class="text-muted">Beginn</span><input class="input" type="time" name="startTime" bind:value={formStart} required /></label>
-			<label class="space-y-1 text-sm"><span class="text-muted">Ende</span><input class="input" type="time" name="endTime" value={plusHour(formStart)} required /></label>
-		{/if}
-		<input class="input" name="location" placeholder="Ort (optional)" />
-		<input class="input" name="notes" placeholder="Notiz (optional)" />
-		{#if form?.error}<p class="text-neg text-sm sm:col-span-2">{form.error}</p>{/if}
-		<div class="flex justify-end gap-2 sm:col-span-2">
-			<button type="button" class="btn" onclick={() => (showForm = false)}>Abbrechen</button>
-			<button class="btn-primary">Speichern</button>
-		</div>
-	</form>
+	{#key editing?.id ?? 'neu'}
+		<form
+			method="POST"
+			action={editing ? '?/update' : '?/add'}
+			class="card mb-4 grid gap-3 p-4 sm:grid-cols-2"
+			use:enhance={() => async ({ result, update }) => {
+				await update({ reset: false });
+				if (result.type === 'success') showForm = false;
+			}}
+		>
+			<h2 class="font-semibold sm:col-span-2">{editing ? 'Termin bearbeiten' : 'Neuer Termin'}</h2>
+			{#if editing}<input type="hidden" name="id" value={editing.id} />{/if}
+			<input class="input sm:col-span-2" name="title" placeholder="Titel" aria-label="Titel" value={editing?.title ?? ''} required />
+			<label class="space-y-1 text-sm"><span class="text-muted">Datum</span><input class="input" type="date" name="date" bind:value={formDate} required /></label>
+			<label class="space-y-1 text-sm"><span class="text-muted">Bis (optional)</span><input class="input" type="date" name="endDate" min={formDate} bind:value={formEndDate} /></label>
+			<label class="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" name="allDay" bind:checked={allDay} class="size-4" /> Ganztägig</label>
+			{#if !allDay}
+				<label class="space-y-1 text-sm"><span class="text-muted">Beginn</span><input class="input" type="time" name="startTime" bind:value={formStart} onchange={() => !editing && (formEnd = plusHour(formStart))} required /></label>
+				<label class="space-y-1 text-sm"><span class="text-muted">Ende</span><input class="input" type="time" name="endTime" bind:value={formEnd} required /></label>
+			{/if}
+			<input class="input" name="location" placeholder="Ort (optional)" aria-label="Ort" value={editing?.location ?? ''} />
+			<input class="input" name="notes" placeholder="Notiz (optional)" aria-label="Notiz" value={editing?.notes ?? ''} />
+			{#if form?.error}<p class="text-neg text-sm sm:col-span-2">{form.error}</p>{/if}
+			<div class="flex justify-end gap-2 sm:col-span-2">
+				<button type="button" class="btn" onclick={() => (showForm = false)}>Abbrechen</button>
+				<button class="btn-primary">Speichern</button>
+			</div>
+		</form>
+	{/key}
 {/if}
 
 {#snippet eventCard(e: Ev, compact = false)}
 	<div class="group flex items-start gap-2">
-		<div class="min-w-0 flex-1">
+		<button class="min-w-0 flex-1 text-left" onclick={() => editEvent(e)} aria-label="{e.title} bearbeiten">
 			<p class="truncate font-medium">{e.title}</p>
 			{#if !compact}
 				<p class="text-muted truncate text-xs">
 					{e.allDay ? 'Ganztägig' : `${fmtTime(e.start)} – ${fmtTime(e.end)}`}{e.location ? ` · ${e.location}` : ''}
 				</p>
 			{/if}
-		</div>
+		</button>
 		<form method="POST" action="?/delete" use:enhance class="opacity-60 group-hover:opacity-100">
 			<input type="hidden" name="id" value={e.id} />
 			<button class="hover:text-neg p-0.5" aria-label="Termin löschen"><Icon name="trash" size={14} /></button>

@@ -44,4 +44,3 @@ Am iPhone in Safari öffnen → Teilen → **Zum Home-Bildschirm**.
 
 - **Kalender ↔ iPhone:** Sync über iCloud-CalDAV (Felder `caldav_*` in `events` sind schon vorbereitet)
 - **Garmin:** Import über die Garmin Personal API in die Tabelle `activities`
-- Termine und To-Dos bearbeiten (derzeit: anlegen, abhaken, löschen)
