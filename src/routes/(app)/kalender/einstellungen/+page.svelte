@@ -87,10 +87,50 @@
 			<p class="text-muted py-2 text-sm">Noch keine schulfreien Tage eingetragen.</p>
 		{/if}
 		<form method="POST" action="?/addFreeDay" class="mt-3 grid grid-cols-2 gap-2" use:enhance={() => async ({ update }) => update({ reset: true })}>
-			<input class="input col-span-2" name="label" placeholder="z. B. Semesterferien" aria-label="Bezeichnung" required />
+			<input class="input col-span-2" name="label" placeholder="z. B. schulautonomer Tag" aria-label="Bezeichnung" required />
 			<label class="space-y-1 text-sm"><span class="text-muted">Von</span><input class="input" type="date" name="from" required /></label>
 			<label class="space-y-1 text-sm"><span class="text-muted">Bis (optional)</span><input class="input" type="date" name="to" /></label>
 			<button class="btn col-span-2"><Icon name="plus" size={18} />Eintragen</button>
 		</form>
 	</section>
+
+	{#if data.school}
+		<section class="card p-4 lg:col-span-2" id="schule">
+			<h2 class="font-semibold">Schul-Block und Schulweg</h2>
+			<p class="text-muted mb-3 text-sm">
+				Wöchentliche Serien im Kalender „Schule“, seit {fmtDateShort(data.school.from)} bis zum letzten Unterrichtstag. Änderungen gelten für die ganze Serie, auch rückwirkend.
+			</p>
+			<form method="POST" action="?/saveSchool" use:enhance={keep}>
+				<div class="overflow-x-auto">
+					<table class="w-full min-w-[34rem] text-sm">
+						<thead>
+							<tr class="text-muted text-left">
+								<th class="pb-2 font-normal"></th>
+								<th class="pb-2 font-normal">Abfahrt</th>
+								<th class="pb-2 font-normal">Schulbeginn</th>
+								<th class="pb-2 font-normal">Schulschluss</th>
+								<th class="pb-2 font-normal">Ankunft daheim</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each data.weekdays as name, i (name)}
+								{@const d = data.school.days[i]}
+								<tr>
+									<th class="py-1 pr-3 text-left font-medium" scope="row">{name}</th>
+									<td class="py-1 pr-2"><input class="input" type="time" name="leave{i}" value={d.leave} aria-label="{name}: Abfahrt" required /></td>
+									<td class="py-1 pr-2"><input class="input" type="time" name="start{i}" value={d.start} aria-label="{name}: Schulbeginn" required /></td>
+									<td class="py-1 pr-2"><input class="input" type="time" name="end{i}" value={d.end} aria-label="{name}: Schulschluss" required /></td>
+									<td class="py-1"><input class="input" type="time" name="home{i}" value={d.home} aria-label="{name}: Ankunft daheim" required /></td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<div class="mt-3 flex flex-wrap items-end gap-3">
+					<label class="space-y-1 text-sm"><span class="text-muted">Letzter Unterrichtstag</span><input class="input" type="date" name="lastDay" value={data.school.lastDay} required /></label>
+					<button class="btn-primary ml-auto">Zeiten speichern</button>
+				</div>
+			</form>
+		</section>
+	{/if}
 </div>

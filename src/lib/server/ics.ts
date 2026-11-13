@@ -309,6 +309,12 @@ export function buildIcs(f: IcsFields, raw?: string | null): string {
 	return comp.toString();
 }
 
+/** Tage (Wiener Datum), an denen die Serie entfällt, sortiert */
+export function skipDays(raw: string): string[] {
+	const l = load(raw);
+	return l ? skipDaysOf(l.masterComp).sort() : [];
+}
+
 /** Tage (Wiener Datum), an denen die Serie laut EXDATE entfällt */
 function skipDaysOf(vevent: ICAL.Component): string[] {
 	const tzid = tzidOf(vevent);

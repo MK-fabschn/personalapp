@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Icon from '#lib/components/Icon.svelte';
 	import {
@@ -111,6 +112,8 @@
 	}
 	function editEvent(e: Ev) {
 		if (e.readOnly) return;
+		// Schul-Block und Schulweg kommen aus den Einstellungen
+		if (e.managedKey?.startsWith('schule:')) return void goto('/kalender/einstellungen#schule');
 		editing = e;
 		// Bei einer Serie gelten Datum und Uhrzeit für den ersten Termin der Serie
 		formDate = localDate(e.seriesStart);

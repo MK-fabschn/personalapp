@@ -4,7 +4,7 @@ import { and, asc, eq, gt, gte, isNull, lt, ne, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import * as t from './db/schema';
 import type { Db } from './db/types';
-import { buildIcs, expandIcs, parseIcs, skipOccurrence, type Repeat } from './ics';
+import { buildIcs, expandIcs, parseIcs, skipDays as skipDaysIn, skipOccurrence, type Repeat } from './ics';
 import { localDate, viennaToDate } from '#lib/format.js';
 
 export class CalendarError extends Error {}
@@ -181,7 +181,10 @@ export async function createEvent(db: Db, input: EventWrite, extra: Extra = {}):
 	return row.id;
 }
 
-async function editableEvent(db: Db, id: number): Promise<EventRow> {
+/** Von der App verwaltete Schul-Termine: Sie werden aus den Einstellungen erzeugt und dort geändert. */
+export const isSchoolManaged = (managedKey: string | null) => !!managedKey?.startsWith('schule:');
+
+async function editableEvent(db: Db, id: number, opts: { managed?: boolean } = {}): Promise<EventRow> {
 	const [row] = await db
 		.select({ e: t.events, readOnly: t.calendars.readOnly, name: t.calendars.name })
 		.from(t.events)
@@ -189,6 +192,9 @@ async function editableEvent(db: Db, id: number): Promise<EventRow> {
 		.where(and(eq(t.events.id, id), ne(t.events.syncState, 'deleted')));
 	if (!row) throw new CalendarError('Diesen Termin gibt es nicht mehr.');
 	if (row.readOnly) throw new CalendarError(`„${row.name}“ ist ein freigegebener Kalender und nur lesbar.`);
+	if (isSchoolManaged(row.e.managedKey) && !opts.managed) {
+		throw new CalendarError('Schul-Block und Schulweg werden in den Kalender-Einstellungen geändert. Für einen einzelnen Tag dort einen schulfreien Tag eintragen.');
+	}
 	return row.e;
 }
 
@@ -208,7 +214,7 @@ async function leaveTombstone(db: Db, e: EventRow) {
 }
 
 export async function updateEvent(db: Db, id: number, input: EventWrite, extra: Extra = {}) {
-	const e = await editableEvent(db, id);
+	const e = await editableEvent(db, id, { managed: extra.managedKey !== undefined });
 	const cal = await writableCalendar(db, input.calendarId ?? e.calendarId);
 	const raw = buildIcs({ ...input, uid: e.caldavUid, skipDays: extra.skipDays }, e.icalRaw);
 	const moved = cal.id !== e.calendarId;
@@ -245,6 +251,50 @@ export async function skipEventOccurrence(db: Db, id: number, original: Date) {
 		.update(t.events)
 		.set({ ...columnsFrom(raw), syncState: 'dirty', updatedAt: new Date() })
 		.where(eq(t.events.id, id));
+}
+
+// ─── Verwaltete Termine ───────────────────────────────────────────────────
+
+/**
+ * Legt einen von der App verwalteten Serientermin an oder bringt ihn auf den gewünschten Stand.
+ * Stimmt er schon, bleibt er unberührt (sonst würde er bei jedem Start erneut an iCloud übertragen).
+ */
+export async function upsertManaged(db: Db, key: string, input: EventWrite, skipDays: string[]): Promise<'created' | 'updated' | 'unchanged'> {
+	const [e] = await db
+		.select()
+		.from(t.events)
+		.where(and(eq(t.events.managedKey, key), ne(t.events.syncState, 'deleted')));
+	if (!e) {
+		await createEvent(db, input, { managedKey: key, skipDays });
+		return 'created';
+	}
+	const cal = await writableCalendar(db, input.calendarId);
+	const now = e.icalRaw ? parseIcs(e.icalRaw) : null;
+	const wantedUntil = parseIcs(buildIcs({ ...input, uid: e.caldavUid }))!.seriesUntil;
+	const same =
+		!!now &&
+		cal.id === e.calendarId &&
+		now.title === input.title &&
+		now.allDay === input.allDay &&
+		now.start.getTime() === input.start.getTime() &&
+		now.end.getTime() === input.end.getTime() &&
+		now.repeat === (input.repeat === 'keep' ? now.repeat : input.repeat) &&
+		now.seriesUntil?.getTime() === wantedUntil?.getTime() &&
+		skipDaysIn(e.icalRaw!).join() === [...new Set(skipDays)].sort().join();
+	if (same) return 'unchanged';
+	await updateEvent(db, e.id, input, { managedKey: key, skipDays });
+	return 'updated';
+}
+
+/** Entfernt einen verwalteten Termin (falls vorhanden) */
+export async function removeManaged(db: Db, key: string) {
+	const [e] = await db
+		.select({ id: t.events.id, href: t.events.caldavHref })
+		.from(t.events)
+		.where(and(eq(t.events.managedKey, key), ne(t.events.syncState, 'deleted')));
+	if (!e) return;
+	if (e.href) await db.update(t.events).set({ syncState: 'deleted', deletedAt: new Date(), managedKey: null }).where(eq(t.events.id, e.id));
+	else await db.delete(t.events).where(eq(t.events.id, e.id));
 }
 
 // ─── Schulfreie Tage ──────────────────────────────────────────────────────
