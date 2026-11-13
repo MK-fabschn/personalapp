@@ -1,0 +1,41 @@
+{
+	"name": "fabse-app",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#lib": "./src/lib/index.js",
+		"#lib/*": "./src/lib/*"
+	},
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"start": "node scripts/migrate.js && node build",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "node scripts/migrate.js",
+		"db:studio": "drizzle-kit studio",
+		"hash-password": "node scripts/hash-password.js"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^6.0.2",
+		"@sveltejs/kit": "^3.0.0",
+		"@sveltejs/vite-plugin-svelte": "^7.2.0",
+		"@tailwindcss/vite": "^4.3.5",
+		"@types/node": "^22.20.5",
+		"drizzle-kit": "^0.31.11",
+		"svelte": "^5.57.2",
+		"svelte-check": "^4.6.0",
+		"tailwindcss": "^4.3.5",
+		"typescript": "^6.0.3",
+		"vite": "^8.3.0"
+	},
+	"dependencies": {
+		"@node-rs/argon2": "^2.2.2",
+		"drizzle-orm": "^0.45.4",
+		"postgres": "^4.1.1"
+	}
+}

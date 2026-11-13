@@ -1,0 +1,77 @@
+# Personal App app.fabian-trutschnig.dev auf dem netcup-VPS.
+# Läuft hinter dem Traefik aus dem MK-Nikolsdorf-Stack (externes Netz "web"), siehe DEPLOYMENT.md.
+# Das Wildcard-Zertifikat *.fabian-trutschnig.dev kommt vom Traefik-Resolver "cloudflare".
+# Router- und Service-Namen tragen das Präfix "personalapp", damit nichts mit anderen Stacks kollidiert.
+name: personalapp
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: personalapp_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fabse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in .env}
+      POSTGRES_DB: fabse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U fabse']
+      interval: 5s
+      retries: 10
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: '2'
+    # Nur intern erreichbar, nicht im Traefik-Netz
+    networks:
+      - internal
+
+  app:
+    build: .
+    image: personalapp-web:latest
+    container_name: personalapp_web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://fabse:${POSTGRES_PASSWORD}@db:5432/fabse
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH:?APP_PASSWORD_HASH fehlt in .env}
+      ORIGIN: https://app.fabian-trutschnig.dev
+      # Echte Client-IP (für die Login-Sperre). Cloudflare setzt diesen Header,
+      # Traefik reicht ihn unverändert durch.
+      ADDRESS_HEADER: CF-Connecting-IP
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: '2'
+    # Kein "ports:" – von außen nur über Traefik (HTTPS) erreichbar
+    networks:
+      - web
+      - internal
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: web
+      traefik.http.routers.personalapp.rule: Host(`app.fabian-trutschnig.dev`)
+      traefik.http.routers.personalapp.entrypoints: websecure
+      traefik.http.routers.personalapp.tls: 'true'
+      traefik.http.routers.personalapp.tls.certresolver: cloudflare
+      traefik.http.routers.personalapp.service: personalapp
+      traefik.http.services.personalapp.loadbalancer.server.port: '3000'
+
+networks:
+  web:
+    external: true
+  internal: {}
+
+volumes:
+  pgdata:

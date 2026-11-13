@@ -1,0 +1,47 @@
+# Fabse – persönliches Dashboard
+
+Web-App für **app.fabian-trutschnig.dev**: To-Dos, Kalender, Training, Finanzen und Journal.
+Läuft am Handy als installierbare App (PWA) und passt sich automatisch an Hell-/Dunkelmodus an.
+
+**Stack:** SvelteKit 3 · Svelte 5 · TypeScript · Tailwind 4 · Drizzle ORM · PostgreSQL · Docker
+
+## Lokal entwickeln
+
+```bash
+npm install
+# Postgres lokal starten, z. B.:
+docker run -d --name fabse-db -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:17-alpine
+
+export DATABASE_URL=postgres://postgres:dev@localhost:5432/postgres
+npm run db:migrate                       # Tabellen + Standardkonten anlegen
+npm run hash-password -- "meinPasswort"  # Hash kopieren (für die Shell: $$ wieder zu $ machen)
+export APP_PASSWORD_HASH='$argon2id$...'
+npm run dev
+```
+
+Schema geändert? → `npm run db:generate` erzeugt eine neue Migration in `drizzle/`.
+
+## Auf dem eigenen Server
+
+Läuft auf dem netcup-VPS hinter Traefik und Cloudflare, Deploy automatisch per GitHub Actions
+bei jedem Push auf `main`. Einrichtung und Betrieb: siehe **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+
+Am iPhone in Safari öffnen → Teilen → **Zum Home-Bildschirm**.
+
+> HTTPS ist Pflicht: Das Login-Cookie ist `secure` und funktioniert über reines HTTP nur auf `localhost`.
+
+## Aufbau
+
+| Pfad | Inhalt |
+|---|---|
+| `src/lib/server/db/schema.ts` | Datenbankschema für alle Module |
+| `src/lib/server/auth.ts` | Login mit Sessions (Token gehasht in der DB, 30 Tage) |
+| `src/routes/(app)/` | Seiten: Übersicht, `todos`, `kalender`, `training`, `finanzen`, `journal` |
+| `src/lib/format.ts` | Datum/Zeit (Europe/Vienna), Euro-Format |
+| `scripts/migrate.js` | Migrationen + Startdaten (Raika, Revolut, Sparkonto, Bargeld; Beispiel-Habits) |
+
+## Noch offen
+
+- **Kalender ↔ iPhone:** Sync über iCloud-CalDAV (Felder `caldav_*` in `events` sind schon vorbereitet)
+- **Garmin:** Import über die Garmin Personal API in die Tabelle `activities`
+- Termine und To-Dos bearbeiten (derzeit: anlegen, abhaken, löschen)
