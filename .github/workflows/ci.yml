@@ -16,6 +16,7 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run check
+      - run: npm test
       - run: npm run build
       # Prüft, dass auch das Docker-Image baut, bevor der Server es versucht.
       - run: docker build -t personalapp-web:ci .

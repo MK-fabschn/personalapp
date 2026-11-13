@@ -57,6 +57,14 @@ export const actions: Actions = {
 		if (!name) return fail(400, { error: 'Name fehlt.' });
 		await db.insert(t.todoCategories).values({ name, color: str(f.get('color')) ?? '#6366f1' });
 	},
+	updateCategory: async ({ request }) => {
+		const f = await request.formData();
+		const id = Number(f.get('id'));
+		const name = str(f.get('name'));
+		const color = str(f.get('color'));
+		if (!name || !color || !/^#[0-9a-fA-F]{6}$/.test(color)) return fail(400, { error: 'Name und Farbe sind nötig.' });
+		await db.update(t.todoCategories).set({ name, color }).where(eq(t.todoCategories.id, id));
+	},
 	deleteCategory: async ({ request }) => {
 		const id = Number((await request.formData()).get('id'));
 		await db.delete(t.todoCategories).where(eq(t.todoCategories.id, id));

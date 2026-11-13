@@ -77,17 +77,21 @@
 				<ul class="mt-3 space-y-1">
 					{#each data.categories as c (c.id)}
 						<li class="flex items-center gap-2">
-							<span class="size-3 rounded-full" style="background:{c.color}"></span>
-							<span class="flex-1">{c.name}</span>
+							<!-- Name und Farbe direkt ändern: speichert beim Verlassen des Feldes -->
+							<form method="POST" action="?/updateCategory" class="flex min-w-0 flex-1 items-center gap-2" use:enhance={() => async ({ update }) => update({ reset: false })}>
+								<input type="hidden" name="id" value={c.id} />
+								<input type="color" name="color" value={c.color} aria-label="Farbe von {c.name}" class="size-7 shrink-0 cursor-pointer rounded bg-transparent" onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+								<input class="input py-1" name="name" value={c.name} aria-label="Name der Kategorie" required onchange={(e) => e.currentTarget.form?.requestSubmit()} />
+							</form>
 							<form method="POST" action="?/deleteCategory" use:enhance>
 								<input type="hidden" name="id" value={c.id} />
-								<button class="text-muted hover:text-neg p-1" aria-label="Kategorie löschen"><Icon name="trash" size={16} /></button>
+								<button class="text-muted hover:text-neg p-1" aria-label="Kategorie {c.name} löschen"><Icon name="trash" size={16} /></button>
 							</form>
 						</li>
 					{/each}
 				</ul>
 				<form method="POST" action="?/addCategory" class="mt-3 flex gap-2" use:enhance={() => async ({ update }) => update({ reset: true })}>
-					<input class="input" name="name" placeholder="z. B. Schule" required />
+					<input class="input" name="name" placeholder="Neue Kategorie" required />
 					<input type="color" name="color" value="#6366f1" class="h-10 w-12 shrink-0 cursor-pointer rounded-lg bg-transparent" />
 					<button class="btn" aria-label="Kategorie hinzufügen"><Icon name="plus" size={18} /></button>
 				</form>
