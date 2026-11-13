@@ -27,11 +27,11 @@ außen nur über Traefik erreichbar (kein veröffentlichter Port).
 Als root: User anlegen und in die Gruppe `docker` aufnehmen.
 
 ```sh
-adduser --disabled-password personalapp
-usermod -aG docker personalapp
+adduser --disabled-password app
+usermod -aG docker app
 ```
 
-Als `personalapp`: Das Repo ist öffentlich, der Server klont deshalb über HTTPS ohne eigenen Key.
+Als `app` (SSH-Alias `personalapp-vps`): Das Repo ist öffentlich, der Server klont deshalb über HTTPS ohne eigenen Key.
 
 ```sh
 git clone https://github.com/MK-fabschn/personalapp.git ~/personalapp
@@ -64,7 +64,7 @@ ssh-keygen -t ed25519 -f personalapp_github_deploy -N '' -C "github-actions depl
 ```
 
 Den Public Key (`personalapp_github_deploy.pub`) mit Zwangsbefehl in
-`/home/personalapp/.ssh/authorized_keys` eintragen. Der Key kann dann nur `deploy.sh` starten,
+`/home/app/.ssh/authorized_keys` eintragen. Der Key kann dann nur `deploy.sh` starten,
 keine Shell, kein Port-Forwarding:
 
 ```
@@ -81,10 +81,10 @@ Repo → Settings → Secrets and variables → Actions:
 | Secret         | Wert                                               |
 | -------------- | -------------------------------------------------- |
 | `VPS_HOST`     | IP des VPS (nicht ins Repo schreiben)              |
-| `VPS_USER`     | `personalapp`                                      |
+| `VPS_USER`     | `app`                                              |
 | `VPS_SSH_KEY`  | privater Schlüssel des Deploy-Keys GitHub → Server |
 | `VPS_SSH_PORT` | optional, Standard `22`                            |
-| `DEPLOY_PATH`  | `/home/personalapp/personalapp`                    |
+| `DEPLOY_PATH`  | `/home/app/personalapp`                            |
 
 ## 5. Laufender Betrieb
 

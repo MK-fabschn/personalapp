@@ -1,5 +1,5 @@
 #!/bin/sh
-# Server-seitiges Deploy-Skript (läuft auf dem netcup-VPS als User "personalapp").
+# Server-seitiges Deploy-Skript (läuft auf dem netcup-VPS als User "app").
 # Wird von der GitHub-Action (.github/workflows/deploy.yml) per SSH aufgerufen
 # oder manuell:  ./scripts/deploy.sh
 set -eu
