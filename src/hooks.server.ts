@@ -3,6 +3,7 @@ import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { db } from '#lib/server/db/index.js';
 import { startSyncScheduler } from '#lib/server/icloud/index.js';
+import { ensureMatura } from '#lib/server/matura.js';
 import { ensureSchool } from '#lib/server/school.js';
 import { validateSession } from '#lib/server/auth.js';
 
@@ -14,8 +15,10 @@ export const init: ServerInit = async () => {
 	try {
 		// Schul-Blöcke und Schulwege anlegen bzw. auf den Stand der Einstellungen bringen
 		await ensureSchool(db);
+		// Matura- und MedAT-Termine 2027 (nur beim ersten Mal)
+		await ensureMatura(db);
 	} catch (e) {
-		console.error('[start] Schul-Termine konnten nicht vorbereitet werden:', e);
+		console.error('[start] Schul- und Matura-Termine konnten nicht vorbereitet werden:', e);
 	}
 	startSyncScheduler();
 };
