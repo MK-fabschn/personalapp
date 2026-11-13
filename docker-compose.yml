@@ -43,6 +43,9 @@ services:
       # Echte Client-IP (für die Login-Sperre). Cloudflare setzt diesen Header,
       # Traefik reicht ihn unverändert durch.
       ADDRESS_HEADER: CF-Connecting-IP
+      # Kalender-Sync mit iCloud (optional: fehlen die Werte, läuft die App ohne Abgleich)
+      ICLOUD_APPLE_ID: ${ICLOUD_APPLE_ID:-}
+      ICLOUD_APP_PASSWORD: ${ICLOUD_APP_PASSWORD:-}
     read_only: true
     tmpfs:
       - /tmp

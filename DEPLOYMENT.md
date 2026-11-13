@@ -45,6 +45,9 @@ chmod 600 .env
 - `POSTGRES_PASSWORD`: zufällig, z. B. `openssl rand -hex 32`
 - `APP_PASSWORD_HASH`: lokal `npm run hash-password -- "deinLoginPasswort"` ausführen und die Zeile
   übernehmen (jedes `$` ist dort schon verdoppelt, weil docker compose `$` sonst als Variable liest)
+- `ICLOUD_APPLE_ID` und `ICLOUD_APP_PASSWORD` (optional): Apple-ID und app-spezifisches Passwort von
+  account.apple.com für den Kalender-Sync. Ändert sich das Apple-Passwort, widerruft Apple das
+  app-spezifische Passwort; der Kalender zeigt dann einen Hinweis, bis ein neues eingetragen ist.
 
 Danach starten:
 

@@ -11,6 +11,7 @@ import {
 	skipEventOccurrence,
 	updateEvent
 } from '#lib/server/calendar.js';
+import { icloudConfigured, requestSync, runSync, syncIfStale, syncStatus } from '#lib/server/icloud/index.js';
 import { parseEventForm, validDate } from '#lib/server/forms.js';
 import { addDays, startOfWeek, today } from '#lib/format.js';
 import type { Actions, PageServerLoad } from './$types';
@@ -29,14 +30,18 @@ export const load: PageServerLoad = async ({ url }) => {
 	}
 	const to = addDays(from, days);
 
-	const [calendars, events, freeDays, todos] = await Promise.all([
+	// Beim Öffnen kurz abgleichen, damit Änderungen vom iPhone gleich zu sehen sind
+	await syncIfStale();
+
+	const [calendars, events, freeDays, todos, status] = await Promise.all([
 		listCalendars(db),
 		eventsBetween(db, from, to),
 		freeDaysBetween(db, from, to),
 		db
 			.select({ id: t.todos.id, title: t.todos.title, dueDate: t.todos.dueDate, done: t.todos.done })
 			.from(t.todos)
-			.where(and(gte(t.todos.dueDate, from), lt(t.todos.dueDate, to)))
+			.where(and(gte(t.todos.dueDate, from), lt(t.todos.dueDate, to))),
+		syncStatus()
 	]);
 
 	return {
@@ -47,6 +52,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		events,
 		freeDays,
 		todos,
+		sync: icloudConfigured() ? { ok: status?.ok ?? true, error: status?.error ?? null, at: status?.at ?? null } : null,
 		calendars: calendars.map(({ id, name, color, visible, readOnly, isDefault }) => ({ id, name, color, visible, readOnly, isDefault }))
 	};
 };
@@ -55,6 +61,7 @@ export const load: PageServerLoad = async ({ url }) => {
 async function guarded(run: () => Promise<unknown>) {
 	try {
 		await run();
+		requestSync(); // Änderungen gehen sofort nach iCloud
 	} catch (e) {
 		if (e instanceof CalendarError) return fail(400, { error: e.message });
 		throw e;
@@ -83,6 +90,11 @@ export const actions: Actions = {
 		const original = new Date(String(f.get('original')));
 		if (Number.isNaN(original.getTime())) return fail(400, { error: 'Ungültiger Termin.' });
 		return guarded(() => skipEventOccurrence(db, Number(f.get('id')), original));
+	},
+	// Knopf „Jetzt abgleichen“
+	sync: async () => {
+		const status = await runSync();
+		if (status && !status.ok) return fail(502, { error: status.error ?? 'Der Abgleich ist fehlgeschlagen.' });
 	},
 	toggleCalendar: async ({ request }) => {
 		const f = await request.formData();

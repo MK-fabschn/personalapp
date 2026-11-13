@@ -7,7 +7,8 @@ import {
 	timestamp,
 	date,
 	primaryKey,
-	index
+	index,
+	jsonb
 } from 'drizzle-orm/pg-core';
 
 // ─── Login ────────────────────────────────────────────────────────────────
@@ -91,6 +92,13 @@ export const schoolFreeDays = pgTable('school_free_days', {
 	from: date('from_date').notNull(),
 	to: date('to_date').notNull(),
 	label: text('label').notNull()
+});
+
+// ─── Einstellungen ────────────────────────────────────────────────────────
+// Kleine Werte, die keine eigene Tabelle brauchen (z. B. Zustand des iCloud-Syncs, Schulzeiten).
+export const settings = pgTable('settings', {
+	key: text('key').primaryKey(),
+	value: jsonb('value').notNull()
 });
 
 // ─── Finanzen ─────────────────────────────────────────────────────────────

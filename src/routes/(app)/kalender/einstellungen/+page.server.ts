@@ -2,6 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db, t } from '#lib/server/db/index.js';
 import { CalendarError, addFreeDay, deleteFreeDay, listCalendars, listFreeDays, setDefaultCalendar } from '#lib/server/calendar.js';
+import { requestSync } from '#lib/server/icloud/index.js';
 import { validDate } from '#lib/server/forms.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -33,6 +34,7 @@ export const actions: Actions = {
 			.update(t.calendars)
 			.set({ visible: f.get('visible') === 'on', syncEnabled: f.get('syncEnabled') === 'on' })
 			.where(eq(t.calendars.id, id));
+		requestSync();
 	},
 	setDefault: async ({ request }) => {
 		const id = Number((await request.formData()).get('id'));
@@ -50,6 +52,7 @@ export const actions: Actions = {
 		const [same] = await db.select().from(t.calendars).where(eq(t.calendars.name, name));
 		if (same) return fail(400, { error: `Einen Kalender „${name}“ gibt es schon.` });
 		await db.insert(t.calendars).values({ name, color: color(f.get('color')) ?? '#4f46e5' });
+		requestSync(); // legt den Kalender auch in iCloud an
 	},
 	// Nur Kalender, die es in iCloud (noch) nicht gibt: ein verbundener Kalender wird am iPhone gelöscht.
 	deleteCalendar: async ({ request }) => {

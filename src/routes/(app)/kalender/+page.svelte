@@ -32,6 +32,7 @@
 	let formEnd = $state('10:00');
 	let allDay = $state(false);
 	let repeat = $state<'none' | 'weekly' | 'keep'>('none');
+	let syncing = $state(false);
 
 	// Aktionen behalten Ansicht und Datum (?view, ?d) bei, sonst springt der Kalender nach dem Speichern auf heute
 	const act = (name: string) => `?/${name}${page.url.search ? '&' + page.url.search.slice(1) : ''}`;
@@ -153,6 +154,10 @@
 	<h2 class="ml-2 font-semibold">{title}</h2>
 </div>
 
+{#if data.sync && !data.sync.ok && data.sync.error}
+	<p class="card border-neg mb-3 p-3 text-sm" role="alert"><span class="text-neg font-medium">iCloud-Abgleich:</span> {data.sync.error}</p>
+{/if}
+
 <!-- Kalender ein- und ausblenden -->
 <div class="mb-3 flex flex-wrap gap-1.5">
 	{#each data.calendars as c (c.id)}
@@ -164,6 +169,13 @@
 			</button>
 		</form>
 	{/each}
+	{#if data.sync}
+		<form method="POST" action={act('sync')} class="ml-auto" use:enhance={() => { syncing = true; return async ({ update }) => { await update({ reset: false }); syncing = false; }; }}>
+			<button class="chip" disabled={syncing} title={data.sync.at ? `Zuletzt abgeglichen: ${fmtTime(data.sync.at)} Uhr` : 'Noch nicht abgeglichen'}>
+				<Icon name="sync" size={12} />{syncing ? 'Gleiche ab …' : 'Jetzt abgleichen'}
+			</button>
+		</form>
+	{/if}
 </div>
 
 {#if showForm}
@@ -357,4 +369,3 @@
 	</div>
 {/if}
 
-<p class="text-muted mt-4 text-xs">iPhone-Sync folgt im nächsten Schritt.</p>
