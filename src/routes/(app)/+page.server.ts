@@ -18,7 +18,7 @@ export const load: PageServerLoad = async () => {
 			.orderBy(sql`${t.todos.dueDate} asc nulls last`, asc(t.todos.priority))
 			.limit(8),
 		db.$count(t.todos, eq(t.todos.done, false)),
-		eventsBetween(d, addDays(d, 2)),
+		eventsBetween(db, d, addDays(d, 2)),
 		accountsWithBalance(),
 		habitsForDate(d),
 		weeklyStats(2),

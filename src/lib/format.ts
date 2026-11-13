@@ -72,3 +72,45 @@ export const PRIORITIES = [
 	{ value: 2, label: 'Mittel', cls: 'text-amber-500' },
 	{ value: 3, label: 'Niedrig', cls: 'text-muted' }
 ] as const;
+
+/** Ist `tz` ein gültiger IANA-Zeitzonenname (z. B. "Europe/Vienna")? */
+export function isTimeZone(tz: string | null | undefined): tz is string {
+	if (!tz) return false;
+	try {
+		new Intl.DateTimeFormat('en-GB', { timeZone: tz });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export type WallTime = { year: number; month: number; day: number; hour: number; minute: number; second: number };
+
+/** Datum und Uhrzeit eines Zeitpunkts, wie eine Uhr in der Zeitzone `tz` sie zeigt */
+export function wallTime(d: Date | string, tz: string = TZ): WallTime {
+	const parts = new Intl.DateTimeFormat('en-GB', {
+		timeZone: tz,
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hourCycle: 'h23'
+	}).formatToParts(new Date(d));
+	const n = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+	return { year: n('year'), month: n('month'), day: n('day'), hour: n('hour'), minute: n('minute'), second: n('second') };
+}
+
+/** Uhrzeit in der Zeitzone `tz` → Zeitpunkt (berücksichtigt Sommer-/Winterzeit) */
+export function zonedToDate(w: WallTime, tz: string = TZ): Date {
+	const asUtc = Date.UTC(w.year, w.month - 1, w.day, w.hour, w.minute, w.second);
+	// Zweimal annähern: Der Offset am geschätzten Zeitpunkt kann um eine Stunde danebenliegen.
+	let t = asUtc;
+	for (let i = 0; i < 2; i++) {
+		const shown = wallTime(new Date(t), tz);
+		const shownUtc = Date.UTC(shown.year, shown.month - 1, shown.day, shown.hour, shown.minute, shown.second);
+		t = asUtc - (shownUtc - t);
+	}
+	return new Date(t);
+}

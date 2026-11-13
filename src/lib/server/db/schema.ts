@@ -40,24 +40,58 @@ export const todos = pgTable(
 );
 
 // ─── Kalender ─────────────────────────────────────────────────────────────
-// Lokale Kopie; caldav*-Felder sind für den iCloud-Sync vorgesehen.
+// Ein Kalender entspricht (sobald der Sync läuft) genau einem iCloud-Kalender.
+export const calendars = pgTable('calendars', {
+	id: serial('id').primaryKey(),
+	name: text('name').notNull(),
+	color: text('color').notNull().default('#4f46e5'),
+	visible: boolean('visible').notNull().default(true), // in der App eingeblendet
+	syncEnabled: boolean('sync_enabled').notNull().default(true),
+	readOnly: boolean('read_only').notNull().default(false), // freigegebener Kalender
+	isDefault: boolean('is_default').notNull().default(false), // Standardkalender (genau einer)
+	sort: integer('sort').notNull().default(0),
+	caldavUrl: text('caldav_url').unique(),
+	ctag: text('ctag'),
+	syncToken: text('sync_token'),
+	lastSyncedAt: timestamp('last_synced_at', { withTimezone: true })
+});
+
+// Lokale Kopie der Termine. Bei Serien stehen start/end für den ersten Termin;
+// die einzelnen Termine werden aus ical_raw berechnet (src/lib/server/ics.ts).
 export const events = pgTable(
 	'events',
 	{
 		id: serial('id').primaryKey(),
+		calendarId: integer('calendar_id')
+			.notNull()
+			.references(() => calendars.id, { onDelete: 'cascade' }),
 		title: text('title').notNull(),
 		start: timestamp('start', { withTimezone: true }).notNull(),
 		end: timestamp('end', { withTimezone: true }).notNull(),
 		allDay: boolean('all_day').notNull().default(false),
 		location: text('location'),
 		notes: text('notes'),
-		caldavUid: text('caldav_uid').unique(),
+		recurring: boolean('recurring').notNull().default(false),
+		seriesUntil: timestamp('series_until', { withTimezone: true }), // null = Serie ohne Ende
+		icalRaw: text('ical_raw'), // vollständiges iCalendar-Objekt, damit fremde Felder erhalten bleiben
+		managedKey: text('managed_key').unique(), // von der App erzeugte Termine (z. B. Schul-Blöcke)
+		caldavUid: text('caldav_uid').notNull().unique(),
 		caldavHref: text('caldav_href'),
 		caldavEtag: text('caldav_etag'),
+		syncState: text('sync_state').notNull().default('dirty'), // synced | dirty | deleted
+		deletedAt: timestamp('deleted_at', { withTimezone: true }),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 	},
-	(t) => [index('events_start_idx').on(t.start)]
+	(t) => [index('events_start_idx').on(t.start), index('events_calendar_idx').on(t.calendarId)]
 );
+
+// Schulfreie Tage (einzelner Tag: from = to). An diesen Tagen entfallen Schul-Block und Schulweg.
+export const schoolFreeDays = pgTable('school_free_days', {
+	id: serial('id').primaryKey(),
+	from: date('from_date').notNull(),
+	to: date('to_date').notNull(),
+	label: text('label').notNull()
+});
 
 // ─── Finanzen ─────────────────────────────────────────────────────────────
 // Beträge immer in Cent (Integer), damit keine Rundungsfehler entstehen.

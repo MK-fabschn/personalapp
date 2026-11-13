@@ -48,7 +48,7 @@
 		</div>
 		{#each [['Heute', eventsToday], ['Morgen', eventsTomorrow]] as const as [label, list] (label)}
 			<p class="text-muted mt-2 text-xs font-medium uppercase">{label}</p>
-			{#each list as e (e.id)}
+			{#each list as e (e.key)}
 				<div class="flex gap-3 py-1">
 					<span class="text-muted w-12 shrink-0 text-sm tabular-nums">{e.allDay ? 'ganzt.' : fmtTime(e.start)}</span>
 					<span class="truncate">{e.title}</span>

@@ -1,5 +1,6 @@
 // Liest und prüft die Formulare für Termine und To-Dos (Anlegen und Bearbeiten teilen sich die Regeln).
 import { addDays, viennaToDate } from '#lib/format.js';
+import type { EventWrite } from './calendar';
 
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -7,16 +8,7 @@ const text = (v: FormDataEntryValue | null) => (typeof v === 'string' && v.trim(
 export const validDate = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 const validTime = (v: unknown) => (typeof v === 'string' && /^\d{2}:\d{2}$/.test(v) ? v : null);
 
-export type EventInput = {
-	title: string;
-	start: Date;
-	end: Date;
-	allDay: boolean;
-	location: string | null;
-	notes: string | null;
-};
-
-export function parseEventForm(f: FormData): Result<EventInput> {
+export function parseEventForm(f: FormData): Result<EventWrite> {
 	const title = text(f.get('title'));
 	const date = validDate(f.get('date'));
 	const endDate = validDate(f.get('endDate')) ?? date;
@@ -36,7 +28,26 @@ export function parseEventForm(f: FormData): Result<EventInput> {
 	}
 	if (end <= start) return { ok: false, error: 'Das Ende muss nach dem Beginn liegen.' };
 
-	return { ok: true, value: { title, start, end, allDay, location: text(f.get('location')), notes: text(f.get('notes')) } };
+	// Wiederholung: keine, wöchentlich (optional bis zu einem Tag) oder unverändert lassen
+	const rawRepeat = f.get('repeat');
+	const repeat = rawRepeat === 'weekly' || rawRepeat === 'keep' ? rawRepeat : 'none';
+	const until = repeat === 'weekly' ? validDate(f.get('until')) : null;
+	if (until && until < date) return { ok: false, error: 'Die Serie muss nach dem ersten Termin enden.' };
+
+	return {
+		ok: true,
+		value: {
+			title,
+			start,
+			end,
+			allDay,
+			location: text(f.get('location')),
+			notes: text(f.get('notes')),
+			calendarId: Number(f.get('calendarId')) || null,
+			repeat,
+			until
+		}
+	};
 }
 
 export type TodoInput = {

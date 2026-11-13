@@ -20,6 +20,10 @@ _Avoid_: Hauptkalender, Default
 Ein Kalender, den eine andere Person geteilt hat; in der App nur lesbar.
 _Avoid_: Geteilter Kalender, Abo
 
+**Serie**:
+Ein Termin, der sich wöchentlich wiederholt, optional bis zu einem Enddatum; einzelne Termine der Serie können ausfallen.
+_Avoid_: Wiederholung, Dauertermin
+
 **Schul-Block**:
 Wiederkehrender Termin für die Schulzeit eines Wochentags, ohne Unterrichtsfächer.
 _Avoid_: Stundenplan, Unterricht

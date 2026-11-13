@@ -37,10 +37,13 @@ Am iPhone in Safari öffnen → Teilen → **Zum Home-Bildschirm**.
 | `src/lib/server/db/schema.ts` | Datenbankschema für alle Module |
 | `src/lib/server/auth.ts` | Login mit Sessions (Token gehasht in der DB, 30 Tage) |
 | `src/routes/(app)/` | Seiten: Übersicht, `todos`, `kalender`, `training`, `finanzen`, `journal` |
+| `src/lib/server/calendar.ts` | Kalender, Termine, Serien auflösen, schulfreie Tage |
+| `src/lib/server/ics.ts` | iCalendar lesen/schreiben (Grundlage für den iCloud-Sync) |
+| `tests/` | Vitest, Datenbank-Tests mit Postgres im Speicher (`npm test`) |
 | `src/lib/format.ts` | Datum/Zeit (Europe/Vienna), Euro-Format |
 | `scripts/migrate.js` | Migrationen + Startdaten (Raika, Revolut, Sparkonto, Bargeld; Beispiel-Habits) |
 
 ## Noch offen
 
-- **Kalender ↔ iPhone:** Sync über iCloud-CalDAV (Felder `caldav_*` in `events` sind schon vorbereitet)
+- **Kalender ↔ iPhone:** Sync über iCloud-CalDAV (Kalender-Modell steht, Abgleich fehlt noch)
 - **Garmin:** Import über die Garmin Personal API in die Tabelle `activities`

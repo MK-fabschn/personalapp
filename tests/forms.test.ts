@@ -17,7 +17,10 @@ test('Termin mit Uhrzeit: Wiener Zeit wird zu UTC', () => {
 			end: new Date('2026-11-20T18:30:00Z'),
 			allDay: false,
 			location: 'Musikheim',
-			notes: null
+			notes: null,
+			calendarId: null,
+			repeat: 'none',
+			until: null
 		}
 	});
 });
@@ -34,6 +37,18 @@ test('Termin: Fehler bei fehlendem Titel, fehlender Zeit und Ende vor Beginn', (
 		ok: false,
 		error: 'Das Ende muss nach dem Beginn liegen.'
 	});
+});
+
+test('Termin: Kalender und wöchentliche Serie', () => {
+	const basis = { title: 'Schule', date: '2026-11-16', startTime: '08:00', endTime: '16:00' };
+	const r = parseEventForm(form({ ...basis, calendarId: '3', repeat: 'weekly', until: '2027-04-30' }));
+	expect(r.ok && [r.value.calendarId, r.value.repeat, r.value.until]).toEqual([3, 'weekly', '2027-04-30']);
+	const ohneEnde = parseEventForm(form({ ...basis, repeat: 'weekly', until: '' }));
+	expect(ohneEnde.ok && [ohneEnde.value.repeat, ohneEnde.value.until]).toEqual(['weekly', null]);
+	// „Bis“ zählt nur bei einer Serie
+	const keine = parseEventForm(form({ ...basis, repeat: 'none', until: '2027-04-30' }));
+	expect(keine.ok && keine.value.until).toBe(null);
+	expect(parseEventForm(form({ ...basis, repeat: 'weekly', until: '2026-11-15' }))).toEqual({ ok: false, error: 'Die Serie muss nach dem ersten Termin enden.' });
 });
 
 test('To-Do: alle Felder, leere Angaben werden null', () => {
