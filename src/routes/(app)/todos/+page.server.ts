@@ -2,6 +2,8 @@ import { fail } from '@sveltejs/kit';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { db, t } from '#lib/server/db/index.js';
 import { parseTodoForm } from '#lib/server/forms.js';
+import { requestSync } from '#lib/server/icloud/index.js';
+import { mirrorTodo } from '#lib/server/todo-events.js';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -24,19 +26,26 @@ export const load: PageServerLoad = async ({ url }) => {
 	return { todos, categories, show, cat };
 };
 
+/** Termin im Kalender „To-Dos“ nachziehen und gleich ans iPhone schicken */
+async function mirror(id: number) {
+	if (await mirrorTodo(db, id)) requestSync();
+}
+
 const str = (v: FormDataEntryValue | null) => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
 export const actions: Actions = {
 	add: async ({ request }) => {
 		const r = parseTodoForm(await request.formData());
 		if (!r.ok) return fail(400, { error: r.error });
-		await db.insert(t.todos).values(r.value);
+		const [row] = await db.insert(t.todos).values(r.value).returning({ id: t.todos.id });
+		await mirror(row.id);
 	},
 	update: async ({ request }) => {
 		const f = await request.formData();
 		const r = parseTodoForm(f);
 		if (!r.ok) return fail(400, { error: r.error });
 		await db.update(t.todos).set(r.value).where(eq(t.todos.id, Number(f.get('id'))));
+		await mirror(Number(f.get('id')));
 	},
 	toggle: async ({ request }) => {
 		const f = await request.formData();
@@ -46,10 +55,12 @@ export const actions: Actions = {
 			.update(t.todos)
 			.set({ done, doneAt: done ? new Date() : null })
 			.where(eq(t.todos.id, id));
+		await mirror(id);
 	},
 	delete: async ({ request }) => {
 		const id = Number((await request.formData()).get('id'));
 		await db.delete(t.todos).where(eq(t.todos.id, id));
+		await mirror(id);
 	},
 	addCategory: async ({ request }) => {
 		const f = await request.formData();

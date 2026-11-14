@@ -1,6 +1,6 @@
 // Kalender und Termine: Lesen (inkl. Auflösen von Serien) und alle lokalen Änderungen.
 // Jede Änderung markiert den Termin als `dirty`, der Sync überträgt ihn danach an iCloud.
-import { and, asc, eq, gt, gte, isNull, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, isNull, lt, ne, notLike, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import * as t from './db/schema';
 import type { Db } from './db/types';
@@ -99,6 +99,8 @@ export async function eventsBetween(db: Db, fromIso: string, toIso: string): Pro
 			and(
 				eq(t.calendars.visible, true),
 				ne(t.events.syncState, 'deleted'),
+				// Termine zu To-Dos gibt es nur fürs iPhone; die App zeigt die To-Dos selbst an
+				or(isNull(t.events.managedKey), notLike(t.events.managedKey, 'todo:%')),
 				lt(t.events.start, to),
 				or(
 					and(eq(t.events.recurring, false), gt(t.events.end, from)),
@@ -275,6 +277,8 @@ export async function upsertManaged(db: Db, key: string, input: EventWrite, skip
 		!!now &&
 		cal.id === e.calendarId &&
 		now.title === input.title &&
+		now.notes === input.notes &&
+		now.location === input.location &&
 		now.allDay === input.allDay &&
 		now.start.getTime() === input.start.getTime() &&
 		now.end.getTime() === input.end.getTime() &&
@@ -286,15 +290,16 @@ export async function upsertManaged(db: Db, key: string, input: EventWrite, skip
 	return 'updated';
 }
 
-/** Entfernt einen verwalteten Termin (falls vorhanden) */
-export async function removeManaged(db: Db, key: string) {
+/** Entfernt einen verwalteten Termin. Gibt zurück, ob es ihn gab. */
+export async function removeManaged(db: Db, key: string): Promise<boolean> {
 	const [e] = await db
 		.select({ id: t.events.id, href: t.events.caldavHref })
 		.from(t.events)
 		.where(and(eq(t.events.managedKey, key), ne(t.events.syncState, 'deleted')));
-	if (!e) return;
+	if (!e) return false;
 	if (e.href) await db.update(t.events).set({ syncState: 'deleted', deletedAt: new Date(), managedKey: null }).where(eq(t.events.id, e.id));
 	else await db.delete(t.events).where(eq(t.events.id, e.id));
+	return true;
 }
 
 // ─── Schulfreie Tage ──────────────────────────────────────────────────────
