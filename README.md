@@ -40,6 +40,13 @@ Ohne die beiden Werte läuft die App ohne Abgleich.
 Der Dev-Server (`npm run dev`) gleicht absichtlich **nicht** ab, auch wenn die Werte in `.env` stehen,
 damit keine Testdaten im echten Konto landen. Wer das will, setzt `ICLOUD_SYNC_IN_DEV=1`.
 
+## Garmin-Import
+
+Mit `GARMIN_API_KEY` (Garmin Connect → Einstellungen → Personal API Token) holt der Server die Einheiten
+stündlich über die Garmin Connect Personal API, zusätzlich per Knopf „Jetzt abrufen“ auf der Trainingsseite.
+Der erste Abruf lädt die ganze Historie. `GARMIN_API_KEY_EXPIRES` (z. B. `2027-11-14`) sorgt dafür, dass die
+Trainingsseite 14 Tage vor Ablauf des Schlüssels erinnert.
+
 ## Aufbau
 
 | Pfad | Inhalt |
@@ -50,10 +57,7 @@ damit keine Testdaten im echten Konto landen. Wer das will, setzt `ICLOUD_SYNC_I
 | `src/lib/server/calendar.ts` | Kalender, Termine, Serien auflösen, schulfreie Tage |
 | `src/lib/server/ics.ts` | iCalendar lesen/schreiben |
 | `src/lib/server/icloud/` | Sync mit iCloud: `caldav.ts` (Protokoll), `sync.ts` (Abgleich), `index.ts` (Takt und Zustand) |
+| `src/lib/server/garmin/` | Garmin-Import: `api.ts` (Personal API), `import.ts` (Mapping, Upsert), `index.ts` (Takt und Zustand) |
 | `tests/` | Vitest, Datenbank-Tests mit Postgres im Speicher (`npm test`) |
 | `src/lib/format.ts` | Datum/Zeit (Europe/Vienna), Euro-Format |
 | `scripts/migrate.js` | Migrationen + Startdaten (Raika, Revolut, Sparkonto, Bargeld; Beispiel-Habits) |
-
-## Noch offen
-
-- **Garmin:** Import über die Garmin Personal API in die Tabelle `activities`

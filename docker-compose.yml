@@ -46,6 +46,9 @@ services:
       # Kalender-Sync mit iCloud (optional: fehlen die Werte, läuft die App ohne Abgleich)
       ICLOUD_APPLE_ID: ${ICLOUD_APPLE_ID:-}
       ICLOUD_APP_PASSWORD: ${ICLOUD_APP_PASSWORD:-}
+      # Garmin-Import (optional): Schlüssel der Personal API und sein Ablaufdatum (YYYY-MM-DD)
+      GARMIN_API_KEY: ${GARMIN_API_KEY:-}
+      GARMIN_API_KEY_EXPIRES: ${GARMIN_API_KEY_EXPIRES:-}
     read_only: true
     tmpfs:
       - /tmp

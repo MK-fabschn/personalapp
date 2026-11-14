@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { db } from '#lib/server/db/index.js';
+import { startGarminScheduler } from '#lib/server/garmin/index.js';
 import { startSyncScheduler } from '#lib/server/icloud/index.js';
 import { ensureMatura } from '#lib/server/matura.js';
 import { ensureSchool } from '#lib/server/school.js';
@@ -24,6 +25,7 @@ export const init: ServerInit = async () => {
 		console.error('[start] Schul-, Matura- und To-Do-Termine konnten nicht vorbereitet werden:', e);
 	}
 	startSyncScheduler();
+	startGarminScheduler();
 };
 
 export const handle: Handle = async ({ event, resolve }) => {

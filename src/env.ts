@@ -20,6 +20,15 @@ export const variables = defineEnvVars({
 		description: 'App-spezifisches Passwort von account.apple.com',
 		schema: (v) => v || undefined
 	},
+	// Garmin-Import: ohne Schlüssel bleibt die Trainingsseite leer
+	GARMIN_API_KEY: {
+		description: 'Schlüssel der Garmin Connect Personal API (Garmin Connect → Einstellungen → Personal API Token)',
+		schema: (v) => v || undefined
+	},
+	GARMIN_API_KEY_EXPIRES: {
+		description: 'Ablaufdatum des Schlüssels (YYYY-MM-DD), für den Hinweis 14 Tage davor',
+		schema: (v) => v || undefined
+	},
 	ICLOUD_SYNC_IN_DEV: {
 		description: 'Auf 1 setzen, damit auch der Dev-Server (npm run dev) mit iCloud abgleicht',
 		schema: (v) => v || undefined

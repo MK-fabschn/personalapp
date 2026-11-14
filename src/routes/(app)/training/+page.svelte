@@ -1,16 +1,28 @@
 <script lang="ts">
-	import { duration, fmtDateShort, localDate } from '#lib/format.js';
+	import { enhance } from '$app/forms';
+	import Icon from '#lib/components/Icon.svelte';
+	import { duration, fmtDateLong, fmtDateShort, fmtTime, localDate } from '#lib/format.js';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
+	let fetching = $state(false);
 
 	const SPORT: Record<string, { label: string; color: string }> = {
 		running: { label: 'Laufen', color: '#f97316' },
 		cycling: { label: 'Rad', color: '#22c55e' },
 		virtual_ride: { label: 'Zwift', color: '#3b82f6' },
-		strength: { label: 'Kraft', color: '#a855f7' }
+		strength: { label: 'Kraft', color: '#a855f7' },
+		hiking: { label: 'Wandern', color: '#84cc16' },
+		walking: { label: 'Gehen', color: '#14b8a6' },
+		resort_skiing: { label: 'Ski', color: '#0ea5e9' },
+		resort_skiing_snowboarding_ws: { label: 'Ski', color: '#0ea5e9' },
+		bouldering: { label: 'Bouldern', color: '#eab308' },
+		breathwork: { label: 'Atemübung', color: '#94a3b8' },
+		other: { label: 'Sonstiges', color: '#94a3b8' }
 	};
-	const sport = (s: string) => SPORT[s] ?? { label: s, color: '#94a3b8' };
+	// Unbekannte Sportarten: Garmins Bezeichnung lesbar machen (lap_swimming → Lap swimming)
+	const pretty = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replaceAll('_', ' ');
+	const sport = (s: string) => SPORT[s] ?? { label: pretty(s), color: '#94a3b8' };
 
 	const thisWeek = $derived(data.buckets.at(-1)!);
 	const lastWeek = $derived(data.buckets.at(-2)!);
@@ -21,7 +33,50 @@
 
 <svelte:head><title>Training · Fabse</title></svelte:head>
 
-<h1 class="mb-4 text-2xl font-bold">Training</h1>
+<div class="mb-4 flex flex-wrap items-center gap-2">
+	<h1 class="mr-auto text-2xl font-bold">Training</h1>
+	{#if data.garmin}
+		{#if data.garmin.status}
+			<span class="text-muted text-xs">Zuletzt abgerufen: {fmtDateShort(localDate(data.garmin.status.at))} {fmtTime(data.garmin.status.at)}</span>
+		{/if}
+		<form
+			method="POST"
+			action="?/fetch"
+			use:enhance={() => {
+				fetching = true;
+				return async ({ update }) => {
+					await update();
+					fetching = false;
+				};
+			}}
+		>
+			<button class="btn" disabled={fetching}><Icon name="sync" size={16} />{fetching ? 'Rufe ab …' : 'Jetzt abrufen'}</button>
+		</form>
+	{/if}
+</div>
+
+{#if form?.error ?? (data.garmin?.status && !data.garmin.status.ok ? data.garmin.status.error : null)}
+	<p class="card border-neg mb-4 p-3 text-sm" role="alert">
+		<span class="text-neg font-medium">Garmin:</span>
+		{form?.error ?? data.garmin?.status?.error}
+	</p>
+{:else if form && 'added' in form}
+	<p class="card mb-4 p-3 text-sm" role="status">
+		{form.added === 0 ? 'Keine neuen Einheiten.' : form.added === 1 ? '1 neue Einheit übernommen.' : `${form.added} neue Einheiten übernommen.`}
+	</p>
+{/if}
+{#if data.garmin && data.garmin.expiresInDays !== null && data.garmin.expires}
+	<p class="card mb-4 border-amber-500 p-3 text-sm" role="status">
+		{#if data.garmin.expiresInDays < 0}
+			Der Garmin-Schlüssel ist am {fmtDateLong(data.garmin.expires)} abgelaufen.
+		{:else if data.garmin.expiresInDays === 0}
+			Der Garmin-Schlüssel läuft heute ab.
+		{:else}
+			Der Garmin-Schlüssel läuft in {data.garmin.expiresInDays} {data.garmin.expiresInDays === 1 ? 'Tag' : 'Tagen'} ab ({fmtDateLong(data.garmin.expires)}).
+		{/if}
+		Bitte in Garmin Connect unter Einstellungen → Personal API Token einen neuen erzeugen und am Server in der <code>.env</code> eintragen.
+	</p>
+{/if}
 
 <section class="mb-4 grid grid-cols-3 gap-3">
 	<div class="card p-4">
@@ -68,8 +123,10 @@
 		<h2 class="mb-2 font-semibold">Letzte Einheiten</h2>
 		{#if data.recent.length === 0}
 			<div class="text-muted py-6 text-center text-sm">
-				<p>Noch keine Aktivitäten.</p>
-				<p class="mt-1">Sobald die Garmin-Anbindung steht, erscheinen sie hier automatisch.</p>
+				<p>Noch keine Einheiten.</p>
+				<p class="mt-1">
+					{data.garmin ? 'Mit „Jetzt abrufen“ kommen sie von Garmin, danach stündlich von selbst.' : 'Sobald ein Garmin-Schlüssel hinterlegt ist, erscheinen sie hier automatisch.'}
+				</p>
 			</div>
 		{:else}
 			<ul class="divide-border divide-y">
